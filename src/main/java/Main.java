@@ -1,7 +1,7 @@
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.io.OutputStream;
 
 public class Main {
   public static void main(String[] args) {
@@ -9,18 +9,24 @@ public class Main {
 
     int port = 6379;
 
-    try (ServerSocket serverSocket = new ServerSocket(port)) {
-
+    try {
+      ServerSocket serverSocket = new ServerSocket(port);
       serverSocket.setReuseAddress(true);
 
       Socket clientSocket = serverSocket.accept();
 
-      OutputStream output = clientSocket.getOutputStream();
+      InputStream inputStream = clientSocket.getInputStream();
 
-      output.write("+PONG\r\n".getBytes());
-      output.flush();
+      byte[] buffer = new byte[1024];
+      int bytesRead;
+
+      while ((bytesRead = inputStream.read(buffer)) != -1) {
+        clientSocket.getOutputStream().write("+PONG\r\n".getBytes());
+        clientSocket.getOutputStream().flush();
+      }
 
       clientSocket.close();
+      serverSocket.close();
 
     } catch (IOException e) {
       System.out.println("IOException: " + e.getMessage());
