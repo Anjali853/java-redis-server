@@ -1,0 +1,68 @@
+[1mdiff --git a/pom.xml b/pom.xml[m
+[1mindex 582f0f1..071fa79 100644[m
+[1m--- a/pom.xml[m
+[1m+++ b/pom.xml[m
+[36m@@ -9,23 +9,15 @@[m
+     <version>1.0</version>[m
+ [m
+     <properties>[m
+[31m-        <maven.compiler.source>26</maven.compiler.source>[m
+[31m-        <maven.compiler.target>26</maven.compiler.target>[m
+[32m+[m[32m        <maven.compiler.source>25</maven.compiler.source>[m
+[32m+[m[32m        <maven.compiler.target>25</maven.compiler.target>[m
+         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>[m
+[31m-        <java.version>26</java.version>[m
+[32m+[m[32m        <java.version>25</java.version>[m
+     </properties>[m
+ [m
+     <build>[m
+         <plugins>[m
+[31m-            <plugin>[m
+[31m-                <groupId>org.apache.maven.plugins</groupId>[m
+[31m-                <artifactId>maven-compiler-plugin</artifactId>[m
+[31m-                <configuration>[m
+[31m-                    <compilerArgs>[m
+[31m-                        <arg>--enable-preview</arg>[m
+[31m-                    </compilerArgs>[m
+[31m-                </configuration>[m
+[31m-            </plugin>[m
+[32m+[m[41m            [m
+             <plugin>[m
+                 <groupId>org.apache.maven.plugins</groupId>[m
+                 <artifactId>maven-assembly-plugin</artifactId>[m
+[1mdiff --git a/src/main/java/Main.java b/src/main/java/Main.java[m
+[1mindex 25dab0a..fd79d7e 100644[m
+[1m--- a/src/main/java/Main.java[m
+[1m+++ b/src/main/java/Main.java[m
+[36m@@ -4,21 +4,18 @@[m [mimport java.net.Socket;[m
+ [m
+ public class Main {[m
+   public static void main(String[] args) {[m
+[31m-    // You can use print statements as follows for debugging, they'll be visible[m
+[31m-    // when running tests.[m
+     System.out.println("Logs from your program will appear here!");[m
+ [m
+[31m-    // Uncomment the code below to pass the first stage[m
+     ServerSocket serverSocket = null;[m
+     Socket clientSocket = null;[m
+     int port = 6379;[m
+[32m+[m
+     try {[m
+       serverSocket = new ServerSocket(port);[m
+[31m-      // Since the tester restarts your program quite often, setting SO_REUSEADDR[m
+[31m-      // ensures that we don't run into 'Address already in use' errors[m
+       serverSocket.setReuseAddress(true);[m
+[31m-      // Wait for connection from client.[m
+[32m+[m
+       clientSocket = serverSocket.accept();[m
+[32m+[m
+     } catch (IOException e) {[m
+       System.out.println("IOException: " + e.getMessage());[m
+     } finally {[m
+[36m@@ -31,4 +28,4 @@[m [mpublic class Main {[m
+       }[m
+     }[m
+   }[m
+[31m-}[m
+[32m+[m[32m}[m
+\ No newline at end of file[m
