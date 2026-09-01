@@ -7,6 +7,8 @@ public class Main {
 
     int port = 6379;
 
+    RedisStore store = new RedisStore();
+
     try (ServerSocket serverSocket = new ServerSocket(port)) {
 
       serverSocket.setReuseAddress(true);
@@ -22,7 +24,7 @@ public class Main {
             "Client connected: "
                 + clientSocket.getRemoteSocketAddress());
 
-        handleClient(clientSocket);
+        handleClient(clientSocket, store);
       }
 
     } catch (IOException e) {
@@ -32,15 +34,20 @@ public class Main {
     }
   }
 
-  private static void handleClient(Socket clientSocket) {
+  private static void handleClient(
+      Socket clientSocket,
+      RedisStore store) {
 
     try (Socket socket = clientSocket) {
 
-      RESPParser parser = new RESPParser(socket.getInputStream());
+      RESPParser parser = new RESPParser(
+          socket.getInputStream());
 
       BufferedWriter writer = new BufferedWriter(
           new OutputStreamWriter(
               socket.getOutputStream()));
+
+      CommandHandler handler = new CommandHandler(store);
 
       while (true) {
 
@@ -50,7 +57,7 @@ public class Main {
           break;
         }
 
-        CommandHandler.handle(
+        handler.handle(
             arguments,
             writer);
       }

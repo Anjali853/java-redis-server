@@ -1,15 +1,21 @@
-import java.io.*;
-import java.util.*;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.util.List;
 
 public class CommandHandler {
 
-    public static void handle(
+    private final RedisStore store;
+
+    public CommandHandler(RedisStore store) {
+        this.store = store;
+    }
+
+    public void handle(
             List<String> arguments,
             BufferedWriter writer) throws IOException {
 
         if (arguments == null || arguments.isEmpty()) {
-            writer.write("-ERR empty command\r\n");
-            writer.flush();
+            writeError(writer, "empty command");
             return;
         }
 
@@ -18,41 +24,138 @@ public class CommandHandler {
         switch (command) {
 
             case "PING":
-
-                if (arguments.size() == 1) {
-                    writer.write("+PONG\r\n");
-                } else if (arguments.size() == 2) {
-                    // Redis supports PING with a message
-                    String message = arguments.get(1);
-                    writer.write("$" + message.length() + "\r\n");
-                    writer.write(message + "\r\n");
-                } else {
-                    writer.write(
-                            "-ERR wrong number of arguments for 'ping' command\r\n");
-                }
-
-                writer.flush();
+                handlePing(arguments, writer);
                 break;
 
             case "ECHO":
+                handleEcho(arguments, writer);
+                break;
 
-                if (arguments.size() != 2) {
-                    writer.write(
-                            "-ERR wrong number of arguments for 'echo' command\r\n");
-                } else {
-                    String message = arguments.get(1);
+            case "SET":
+                handleSet(arguments, writer);
+                break;
 
-                    writer.write("$" + message.length() + "\r\n");
-                    writer.write(message + "\r\n");
-                }
-
-                writer.flush();
+            case "GET":
+                handleGet(arguments, writer);
                 break;
 
             default:
-
-                writer.write("-ERR unknown command\r\n");
-                writer.flush();
+                writeError(writer, "unknown command");
         }
+    }
+
+    private void handlePing(
+            List<String> arguments,
+            BufferedWriter writer) throws IOException {
+
+        if (arguments.size() == 1) {
+            writer.write("+PONG\r\n");
+
+        } else if (arguments.size() == 2) {
+
+            writeBulkString(
+                    writer,
+                    arguments.get(1));
+
+        } else {
+
+            writeError(
+                    writer,
+                    "wrong number of arguments for 'ping' command");
+        }
+
+        writer.flush();
+    }
+
+    private void handleEcho(
+            List<String> arguments,
+            BufferedWriter writer) throws IOException {
+
+        if (arguments.size() != 2) {
+
+            writeError(
+                    writer,
+                    "wrong number of arguments for 'echo' command");
+
+            writer.flush();
+            return;
+        }
+
+        writeBulkString(
+                writer,
+                arguments.get(1));
+
+        writer.flush();
+    }
+
+    private void handleSet(
+            List<String> arguments,
+            BufferedWriter writer) throws IOException {
+
+        if (arguments.size() != 3) {
+
+            writeError(
+                    writer,
+                    "wrong number of arguments for 'set' command");
+
+            writer.flush();
+            return;
+        }
+
+        String key = arguments.get(1);
+        String value = arguments.get(2);
+
+        store.set(key, value);
+
+        writer.write("+OK\r\n");
+        writer.flush();
+    }
+
+    private void handleGet(
+            List<String> arguments,
+            BufferedWriter writer) throws IOException {
+
+        if (arguments.size() != 2) {
+
+            writeError(
+                    writer,
+                    "wrong number of arguments for 'get' command");
+
+            writer.flush();
+            return;
+        }
+
+        String key = arguments.get(1);
+
+        String value = store.get(key);
+
+        if (value == null) {
+
+            // RESP Null Bulk String
+            writer.write("$-1\r\n");
+
+        } else {
+
+            writeBulkString(
+                    writer,
+                    value);
+        }
+
+        writer.flush();
+    }
+
+    private void writeBulkString(
+            BufferedWriter writer,
+            String value) throws IOException {
+
+        writer.write("$" + value.length() + "\r\n");
+        writer.write(value + "\r\n");
+    }
+
+    private void writeError(
+            BufferedWriter writer,
+            String message) throws IOException {
+
+        writer.write("-ERR " + message + "\r\n");
     }
 }
