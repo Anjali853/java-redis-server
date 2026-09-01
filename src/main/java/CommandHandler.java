@@ -52,13 +52,9 @@ public class CommandHandler {
             writer.write("+PONG\r\n");
 
         } else if (arguments.size() == 2) {
-
-            writeBulkString(
-                    writer,
-                    arguments.get(1));
+            writeBulkString(writer, arguments.get(1));
 
         } else {
-
             writeError(
                     writer,
                     "wrong number of arguments for 'ping' command");
@@ -72,21 +68,18 @@ public class CommandHandler {
             BufferedWriter writer) throws IOException {
 
         if (arguments.size() != 2) {
-
             writeError(
                     writer,
                     "wrong number of arguments for 'echo' command");
-
             writer.flush();
             return;
         }
 
-        writeBulkString(
-                writer,
-                arguments.get(1));
-
+        writeBulkString(writer, arguments.get(1));
         writer.flush();
     }
+
+    // SET supports NX, XX, EX and PX
 
     private void handleSet(
             List<String> arguments,
@@ -103,46 +96,94 @@ public class CommandHandler {
         String key = arguments.get(1);
         String value = arguments.get(2);
 
-        if (arguments.size() == 3) {
+        boolean nx = false;
+        boolean xx = false;
+        Long expiryMillis = null;
 
-            store.set(key, value);
+        int i = 3;
 
-        } else if (arguments.size() == 5) {
+        while (i < arguments.size()) {
 
-            String option = arguments.get(3).toUpperCase();
-            long time;
+            String option = arguments.get(i).toUpperCase();
 
-            try {
-                time = Long.parseLong(arguments.get(4));
-            } catch (NumberFormatException e) {
-                writeError(writer, "invalid expire time");
-                writer.flush();
-                return;
-            }
+            if (option.equals("NX")) {
 
-            if (time < 0) {
-                writeError(writer, "invalid expire time");
-                writer.flush();
-                return;
-            }
+                nx = true;
+                i++;
 
-            if (option.equals("EX")) {
-                store.set(key, value, time * 1000);
+            } else if (option.equals("XX")) {
 
-            } else if (option.equals("PX")) {
-                store.set(key, value, time);
+                xx = true;
+                i++;
+
+            } else if (option.equals("EX") || option.equals("PX")) {
+
+                if (i + 1 >= arguments.size()) {
+                    writeError(writer, "syntax error");
+                    writer.flush();
+                    return;
+                }
+
+                try {
+                    long time = Long.parseLong(arguments.get(i + 1));
+
+                    if (time <= 0) {
+                        writeError(writer, "invalid expire time");
+                        writer.flush();
+                        return;
+                    }
+
+                    if (option.equals("EX")) {
+                        expiryMillis = time * 1000;
+                    } else {
+                        expiryMillis = time;
+                    }
+
+                } catch (NumberFormatException e) {
+                    writeError(writer, "invalid expire time");
+                    writer.flush();
+                    return;
+                }
+
+                i += 2;
 
             } else {
+
                 writeError(writer, "syntax error");
                 writer.flush();
                 return;
             }
+        }
 
-        } else {
-
+        // NX and XX cannot be used together
+        if (nx && xx) {
             writeError(writer, "syntax error");
             writer.flush();
             return;
+        }
+
+        // Check whether key already exists
+        String existingValue = store.get(key);
+
+        // NX = set only if key DOES NOT exist
+        if (nx && existingValue != null) {
+            writer.write("$-1\r\n");
+            writer.flush();
+            return;
+        }
+
+        // XX = set only if key DOES exist
+        if (xx && existingValue == null) {
+            writer.write("$-1\r\n");
+            writer.flush();
+            return;
+        }
+
+        // Perform SET
+        if (expiryMillis != null) {
+            store.set(key, value, expiryMillis);
+        } else {
+            store.set(key, value);
         }
 
         writer.write("+OK\r\n");
@@ -154,29 +195,19 @@ public class CommandHandler {
             BufferedWriter writer) throws IOException {
 
         if (arguments.size() != 2) {
-
             writeError(
                     writer,
                     "wrong number of arguments for 'get' command");
-
             writer.flush();
             return;
         }
 
-        String key = arguments.get(1);
-
-        String value = store.get(key);
+        String value = store.get(arguments.get(1));
 
         if (value == null) {
-
-            // RESP Null Bulk String
             writer.write("$-1\r\n");
-
         } else {
-
-            writeBulkString(
-                    writer,
-                    value);
+            writeBulkString(writer, value);
         }
 
         writer.flush();
@@ -187,7 +218,8 @@ public class CommandHandler {
             String value) throws IOException {
 
         writer.write("$" + value.length() + "\r\n");
-        writer.write(value + "\r\n");
+        writer.write(value);
+        writer.write("\r\n");
     }
 
     private void writeError(
