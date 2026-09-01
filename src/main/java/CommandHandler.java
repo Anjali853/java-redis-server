@@ -103,6 +103,7 @@ public class CommandHandler {
         String key = arguments.get(1);
         String value = arguments.get(2);
 
+        // Normal SET
         if (arguments.size() == 3) {
             store.set(key, value);
             writer.write("+OK\r\n");
@@ -110,6 +111,7 @@ public class CommandHandler {
             return;
         }
 
+        // SET key value PX milliseconds
         if (arguments.size() == 5
                 && arguments.get(3).equalsIgnoreCase("PX")) {
 
@@ -117,17 +119,46 @@ public class CommandHandler {
                 long expiryMillis = Long.parseLong(arguments.get(4));
 
                 if (expiryMillis < 0) {
-                    writeError(writer, "invalid expire time in 'set' command");
-                    writer.flush();
-                    return;
+                    writeError(
+                            writer,
+                            "invalid expire time in 'set' command");
+                } else {
+                    store.set(key, value, expiryMillis);
+                    writer.write("+OK\r\n");
                 }
 
-                store.set(key, value, expiryMillis);
+            } catch (NumberFormatException e) {
+                writeError(
+                        writer,
+                        "value is not an integer or out of range");
+            }
 
-                writer.write("+OK\r\n");
+            writer.flush();
+            return;
+        }
+
+        // SET key value EX seconds
+        if (arguments.size() == 5
+                && arguments.get(3).equalsIgnoreCase("EX")) {
+
+            try {
+                long expirySeconds = Long.parseLong(arguments.get(4));
+
+                if (expirySeconds < 0) {
+                    writeError(
+                            writer,
+                            "invalid expire time in 'set' command");
+                } else {
+                    long expiryMillis = expirySeconds * 1000L;
+
+                    store.set(key, value, expiryMillis);
+                    writer.write("+OK\r\n");
+                }
 
             } catch (NumberFormatException e) {
-                writeError(writer, "value is not an integer or out of range");
+                writeError(
+                        writer,
+                        "value is not an integer or out of range");
             }
 
             writer.flush();
