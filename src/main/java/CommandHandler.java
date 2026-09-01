@@ -103,69 +103,49 @@ public class CommandHandler {
         String key = arguments.get(1);
         String value = arguments.get(2);
 
-        // Normal SET
         if (arguments.size() == 3) {
+
             store.set(key, value);
-            writer.write("+OK\r\n");
-            writer.flush();
-            return;
-        }
 
-        // SET key value PX milliseconds
-        if (arguments.size() == 5
-                && arguments.get(3).equalsIgnoreCase("PX")) {
+        } else if (arguments.size() == 5) {
+
+            String option = arguments.get(3).toUpperCase();
+            long time;
 
             try {
-                long expiryMillis = Long.parseLong(arguments.get(4));
-
-                if (expiryMillis < 0) {
-                    writeError(
-                            writer,
-                            "invalid expire time in 'set' command");
-                } else {
-                    store.set(key, value, expiryMillis);
-                    writer.write("+OK\r\n");
-                }
-
+                time = Long.parseLong(arguments.get(4));
             } catch (NumberFormatException e) {
-                writeError(
-                        writer,
-                        "value is not an integer or out of range");
+                writeError(writer, "invalid expire time");
+                writer.flush();
+                return;
             }
 
+            if (time < 0) {
+                writeError(writer, "invalid expire time");
+                writer.flush();
+                return;
+            }
+
+            if (option.equals("EX")) {
+                store.set(key, value, time * 1000);
+
+            } else if (option.equals("PX")) {
+                store.set(key, value, time);
+
+            } else {
+                writeError(writer, "syntax error");
+                writer.flush();
+                return;
+            }
+
+        } else {
+
+            writeError(writer, "syntax error");
             writer.flush();
             return;
         }
 
-        // SET key value EX seconds
-        if (arguments.size() == 5
-                && arguments.get(3).equalsIgnoreCase("EX")) {
-
-            try {
-                long expirySeconds = Long.parseLong(arguments.get(4));
-
-                if (expirySeconds < 0) {
-                    writeError(
-                            writer,
-                            "invalid expire time in 'set' command");
-                } else {
-                    long expiryMillis = expirySeconds * 1000L;
-
-                    store.set(key, value, expiryMillis);
-                    writer.write("+OK\r\n");
-                }
-
-            } catch (NumberFormatException e) {
-                writeError(
-                        writer,
-                        "value is not an integer or out of range");
-            }
-
-            writer.flush();
-            return;
-        }
-
-        writeError(writer, "syntax error");
+        writer.write("+OK\r\n");
         writer.flush();
     }
 

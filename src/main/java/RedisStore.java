@@ -6,17 +6,17 @@ public class RedisStore {
     private final Map<String, String> data = new HashMap<>();
     private final Map<String, Long> expiry = new HashMap<>();
 
-    public void set(String key, String value) {
+    public synchronized void set(String key, String value) {
         data.put(key, value);
         expiry.remove(key);
     }
 
-    public void set(String key, String value, long expiryMillis) {
+    public synchronized void set(String key, String value, long expiryMillis) {
         data.put(key, value);
         expiry.put(key, System.currentTimeMillis() + expiryMillis);
     }
 
-    public String get(String key) {
+    public synchronized String get(String key) {
         if (!data.containsKey(key)) {
             return null;
         }
