@@ -92,12 +92,10 @@ public class CommandHandler {
             List<String> arguments,
             BufferedWriter writer) throws IOException {
 
-        if (arguments.size() != 3) {
-
+        if (arguments.size() < 3) {
             writeError(
                     writer,
                     "wrong number of arguments for 'set' command");
-
             writer.flush();
             return;
         }
@@ -105,9 +103,38 @@ public class CommandHandler {
         String key = arguments.get(1);
         String value = arguments.get(2);
 
-        store.set(key, value);
+        if (arguments.size() == 3) {
+            store.set(key, value);
+            writer.write("+OK\r\n");
+            writer.flush();
+            return;
+        }
 
-        writer.write("+OK\r\n");
+        if (arguments.size() == 5
+                && arguments.get(3).equalsIgnoreCase("PX")) {
+
+            try {
+                long expiryMillis = Long.parseLong(arguments.get(4));
+
+                if (expiryMillis < 0) {
+                    writeError(writer, "invalid expire time in 'set' command");
+                    writer.flush();
+                    return;
+                }
+
+                store.set(key, value, expiryMillis);
+
+                writer.write("+OK\r\n");
+
+            } catch (NumberFormatException e) {
+                writeError(writer, "value is not an integer or out of range");
+            }
+
+            writer.flush();
+            return;
+        }
+
+        writeError(writer, "syntax error");
         writer.flush();
     }
 
