@@ -31,4 +31,15 @@ public class RedisStore {
 
         return data.get(key);
     }
+
+    public synchronized boolean delete(String key) {
+        if (!data.containsKey(key)) {
+            return false;
+        }
+
+        data.remove(key);
+        expiry.remove(key);
+
+        return true;
+    }
 }

@@ -39,9 +39,38 @@ public class CommandHandler {
                 handleGet(arguments, writer);
                 break;
 
+            case "DEL":
+                handleDel(arguments, writer);
+                break;
+
             default:
                 writeError(writer, "unknown command");
         }
+    }
+
+    // DEL command implementation
+    private void handleDel(
+            List<String> arguments,
+            BufferedWriter writer) throws IOException {
+
+        if (arguments.size() < 2) {
+            writeError(
+                    writer,
+                    "wrong number of arguments for 'del' command");
+            writer.flush();
+            return;
+        }
+
+        int deleted = 0;
+
+        for (int i = 1; i < arguments.size(); i++) {
+            if (store.delete(arguments.get(i))) {
+                deleted++;
+            }
+        }
+
+        writer.write(":" + deleted + "\r\n");
+        writer.flush();
     }
 
     private void handlePing(
