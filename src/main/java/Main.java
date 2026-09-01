@@ -13,8 +13,7 @@ public class Main {
 
       serverSocket.setReuseAddress(true);
 
-      System.out.println(
-          "Redis server started on port " + port);
+      System.out.println("Redis server started on port " + port);
 
       while (true) {
 
@@ -24,7 +23,11 @@ public class Main {
             "Client connected: "
                 + clientSocket.getRemoteSocketAddress());
 
-        handleClient(clientSocket, store);
+        // Each client gets its own thread
+        Thread clientThread = new Thread(
+            () -> handleClient(clientSocket, store));
+
+        clientThread.start();
       }
 
     } catch (IOException e) {
