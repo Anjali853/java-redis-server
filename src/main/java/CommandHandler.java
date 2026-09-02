@@ -45,6 +45,9 @@ public class CommandHandler {
             case "INCR":
                 handleIncr(arguments, writer);
                 break;
+            case "DECR":
+                handleDecr(arguments, writer);
+                break;
 
             default:
                 writeError(writer, "unknown command");
@@ -257,6 +260,44 @@ public class CommandHandler {
         }
 
         writer.write("+OK\r\n");
+        writer.flush();
+    }
+
+    // DECR command implementation
+    private void handleDecr(
+            List<String> arguments,
+            BufferedWriter writer) throws IOException {
+
+        if (arguments.size() != 2) {
+            writeError(
+                    writer,
+                    "wrong number of arguments for 'decr' command");
+            writer.flush();
+            return;
+        }
+
+        String key = arguments.get(1);
+        String value = store.get(key);
+
+        if (value == null) {
+            store.set(key, "-1");
+            writer.write(":-1\r\n");
+            writer.flush();
+            return;
+        }
+
+        try {
+            long number = Long.parseLong(value);
+            number--;
+
+            store.set(key, String.valueOf(number));
+
+            writer.write(":" + number + "\r\n");
+
+        } catch (NumberFormatException e) {
+            writeError(writer, "value is not an integer or out of range");
+        }
+
         writer.flush();
     }
 
