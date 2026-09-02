@@ -49,6 +49,10 @@ public class CommandHandler {
                 handleDecr(arguments, writer);
                 break;
 
+            case "INCRBY":
+                handleIncrBy(arguments, writer);
+                break;
+
             default:
                 writeError(writer, "unknown command");
         }
@@ -109,6 +113,44 @@ public class CommandHandler {
             store.set(key, String.valueOf(number));
 
             writer.write(":" + number + "\r\n");
+
+        } catch (NumberFormatException e) {
+            writeError(writer, "value is not an integer or out of range");
+        }
+
+        writer.flush();
+    }
+
+    // INCRBY command implementation
+    private void handleIncrBy(
+            List<String> arguments,
+            BufferedWriter writer) throws IOException {
+
+        if (arguments.size() != 3) {
+            writeError(
+                    writer,
+                    "wrong number of arguments for 'incrby' command");
+            writer.flush();
+            return;
+        }
+
+        String key = arguments.get(1);
+        String value = store.get(key);
+
+        try {
+            long amount = Long.parseLong(arguments.get(2));
+
+            if (value == null) {
+                long result = amount;
+                store.set(key, String.valueOf(result));
+                writer.write(":" + result + "\r\n");
+            } else {
+                long current = Long.parseLong(value);
+                long result = current + amount;
+
+                store.set(key, String.valueOf(result));
+                writer.write(":" + result + "\r\n");
+            }
 
         } catch (NumberFormatException e) {
             writeError(writer, "value is not an integer or out of range");
