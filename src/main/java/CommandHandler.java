@@ -73,6 +73,10 @@ public class CommandHandler {
                 handleKeys(arguments, writer);
                 break;
 
+            case "TYPE":
+                handleType(arguments, writer);
+                break;
+
             default:
                 writeError(writer, "unknown command");
         }
@@ -532,6 +536,30 @@ public class CommandHandler {
 
         for (String key : keys) {
             writeBulkString(writer, key);
+        }
+
+        writer.flush();
+    }
+
+    // TYPE command implementation
+    private void handleType(
+            List<String> arguments,
+            BufferedWriter writer) throws IOException {
+
+        if (arguments.size() != 2) {
+            writeError(
+                    writer,
+                    "wrong number of arguments for 'type' command");
+            writer.flush();
+            return;
+        }
+
+        String value = store.get(arguments.get(1));
+
+        if (value == null) {
+            writer.write("+none\r\n");
+        } else {
+            writer.write("+string\r\n");
         }
 
         writer.flush();
