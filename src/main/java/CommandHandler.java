@@ -65,6 +65,10 @@ public class CommandHandler {
                 handleMSet(arguments, writer);
                 break;
 
+            case "EXISTS":
+                handleExists(arguments, writer);
+                break;
+
             default:
                 writeError(writer, "unknown command");
         }
@@ -469,6 +473,31 @@ public class CommandHandler {
         }
 
         writer.write("+OK\r\n");
+        writer.flush();
+    }
+
+    // EXISTS command implementation
+    private void handleExists(
+            List<String> arguments,
+            BufferedWriter writer) throws IOException {
+
+        if (arguments.size() < 2) {
+            writeError(
+                    writer,
+                    "wrong number of arguments for 'exists' command");
+            writer.flush();
+            return;
+        }
+
+        int count = 0;
+
+        for (int i = 1; i < arguments.size(); i++) {
+            if (store.get(arguments.get(i)) != null) {
+                count++;
+            }
+        }
+
+        writer.write(":" + count + "\r\n");
         writer.flush();
     }
 
