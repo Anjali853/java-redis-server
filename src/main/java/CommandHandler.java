@@ -57,6 +57,10 @@ public class CommandHandler {
                 handleDecrBy(arguments, writer);
                 break;
 
+            case "MGET":
+                handleMGet(arguments, writer);
+                break;
+
             default:
                 writeError(writer, "unknown command");
         }
@@ -404,6 +408,37 @@ public class CommandHandler {
             writer.write("$-1\r\n");
         } else {
             writeBulkString(writer, value);
+        }
+
+        writer.flush();
+    }
+
+    // MGET command implementation
+    private void handleMGet(
+            List<String> arguments,
+            BufferedWriter writer) throws IOException {
+
+        if (arguments.size() < 2) {
+            writeError(
+                    writer,
+                    "wrong number of arguments for 'mget' command");
+            writer.flush();
+            return;
+        }
+
+        int count = arguments.size() - 1;
+
+        writer.write("*" + count + "\r\n");
+
+        for (int i = 1; i < arguments.size(); i++) {
+
+            String value = store.get(arguments.get(i));
+
+            if (value == null) {
+                writer.write("$-1\r\n");
+            } else {
+                writeBulkString(writer, value);
+            }
         }
 
         writer.flush();
