@@ -61,6 +61,10 @@ public class CommandHandler {
                 handleMGet(arguments, writer);
                 break;
 
+            case "MSET":
+                handleMSet(arguments, writer);
+                break;
+
             default:
                 writeError(writer, "unknown command");
         }
@@ -441,6 +445,30 @@ public class CommandHandler {
             }
         }
 
+        writer.flush();
+    }
+
+    // MSET command implementation
+    private void handleMSet(
+            List<String> arguments,
+            BufferedWriter writer) throws IOException {
+
+        if (arguments.size() < 3 || arguments.size() % 2 == 0) {
+            writeError(
+                    writer,
+                    "wrong number of arguments for 'mset' command");
+            writer.flush();
+            return;
+        }
+
+        for (int i = 1; i < arguments.size(); i += 2) {
+            String key = arguments.get(i);
+            String value = arguments.get(i + 1);
+
+            store.set(key, value);
+        }
+
+        writer.write("+OK\r\n");
         writer.flush();
     }
 
