@@ -69,6 +69,10 @@ public class CommandHandler {
                 handleExists(arguments, writer);
                 break;
 
+            case "KEYS":
+                handleKeys(arguments, writer);
+                break;
+
             default:
                 writeError(writer, "unknown command");
         }
@@ -498,6 +502,38 @@ public class CommandHandler {
         }
 
         writer.write(":" + count + "\r\n");
+        writer.flush();
+    }
+
+    // KEYS command implementation
+    private void handleKeys(
+            List<String> arguments,
+            BufferedWriter writer) throws IOException {
+
+        if (arguments.size() != 2) {
+            writeError(
+                    writer,
+                    "wrong number of arguments for 'keys' command");
+            writer.flush();
+            return;
+        }
+
+        String pattern = arguments.get(1);
+
+        if (!pattern.equals("*")) {
+            writeError(writer, "only '*' pattern is supported");
+            writer.flush();
+            return;
+        }
+
+        java.util.Set<String> keys = store.getKeys();
+
+        writer.write("*" + keys.size() + "\r\n");
+
+        for (String key : keys) {
+            writeBulkString(writer, key);
+        }
+
         writer.flush();
     }
 

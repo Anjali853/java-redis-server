@@ -42,4 +42,8 @@ public class RedisStore {
 
         return true;
     }
+
+    public synchronized java.util.Set<String> getKeys() {
+        return new java.util.HashSet<>(data.keySet());
+    }
 }
