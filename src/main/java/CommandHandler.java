@@ -83,7 +83,59 @@ public class CommandHandler {
                 
             case "PERSIST":
                 handlePersist(arguments, writer);
+                break;   
+                
+            case "APPEND":
+                handleAppend(arguments, writer);
+                break; 
+                
+            case "STRLEN":
+                handleStrlen(arguments, writer);
+                break;  
+                
+            case "GETRANGE":
+                handleGetRange(arguments, writer);
                 break;    
+
+            case "SETNX":
+               handleSetNx(arguments, writer);
+               break;  
+               
+            case "LPUSH":
+               handleLpush(arguments, writer);
+               break;
+               
+            case "RPUSH":
+               handleRpush(arguments, writer);
+               break;  
+               
+            case "LPOP":
+               handleLpop(arguments, writer);
+               break;
+               
+            case "RPOP":
+               handleRpop(arguments, writer);
+               break;
+
+            case "LRANGE":
+               handleLrange(arguments, writer);
+               break;  
+               
+            case "LLEN":
+               handleLlen(arguments, writer);
+               break; 
+               
+            case "LPOS":
+               handleLpos(arguments, writer);
+               break;
+
+            case "LINDEX":
+               handleLindex(arguments, writer);
+               break;
+
+            case "LTRIM":
+               handleLtrim(arguments, writer);
+               break;
 
             default:
                 writeError(writer, "unknown command");
@@ -609,6 +661,368 @@ private void handlePersist(
     boolean removed = store.persist(arguments.get(1));
 
     writer.write(removed ? ":1\r\n" : ":0\r\n");
+    writer.flush();
+}
+
+//
+private void handleAppend(
+        List<String> arguments,
+        BufferedWriter writer) throws IOException {
+
+    if (arguments.size() != 3) {
+        writeError(
+                writer,
+                "wrong number of arguments for 'append' command");
+        writer.flush();
+        return;
+    }
+
+    String key = arguments.get(1);
+    String appendValue = arguments.get(2);
+
+    String currentValue = store.get(key);
+
+    if (currentValue == null) {
+        store.set(key, appendValue);
+        writer.write(":" + appendValue.length() + "\r\n");
+    } else {
+        String newValue = currentValue + appendValue;
+        store.set(key, newValue);
+        writer.write(":" + newValue.length() + "\r\n");
+    }
+
+    writer.flush();
+}
+
+//
+private void handleStrlen(
+        List<String> arguments,
+        BufferedWriter writer) throws IOException {
+
+    if (arguments.size() != 2) {
+        writeError(
+                writer,
+                "wrong number of arguments for 'strlen' command");
+        writer.flush();
+        return;
+    }
+
+    String value = store.get(arguments.get(1));
+
+    if (value == null) {
+        writer.write(":0\r\n");
+    } else {
+        writer.write(":" + value.length() + "\r\n");
+    }
+
+    writer.flush();
+}
+
+//
+private void handleGetRange(
+        List<String> arguments,
+        BufferedWriter writer) throws IOException {
+
+    if (arguments.size() != 4) {
+        writeError(
+                writer,
+                "wrong number of arguments for 'getrange' command");
+        writer.flush();
+        return;
+    }
+
+    String value = store.get(arguments.get(1));
+
+    if (value == null) {
+        writeBulkString(writer, "");
+        writer.flush();
+        return;
+    }
+
+    try {
+        int start = Integer.parseInt(arguments.get(2));
+        int end = Integer.parseInt(arguments.get(3));
+
+        int length = value.length();
+
+        if (start < 0) {
+            start = length + start;
+        }
+
+        if (end < 0) {
+            end = length + end;
+        }
+
+        start = Math.max(start, 0);
+        end = Math.min(end, length - 1);
+
+        if (start > end || start >= length) {
+            writeBulkString(writer, "");
+        } else {
+            writeBulkString(
+                    writer,
+                    value.substring(start, end + 1));
+        }
+
+    } catch (NumberFormatException e) {
+        writeError(writer, "value is not an integer or out of range");
+    }
+
+    writer.flush();
+}
+
+//
+private void handleSetNx(
+        List<String> arguments,
+        BufferedWriter writer) throws IOException {
+
+    if (arguments.size() != 3) {
+        writeError(
+                writer,
+                "wrong number of arguments for 'setnx' command");
+        writer.flush();
+        return;
+    }
+
+    String key = arguments.get(1);
+    String value = arguments.get(2);
+
+    if (store.get(key) != null) {
+        writer.write(":0\r\n");
+    } else {
+        store.set(key, value);
+        writer.write(":1\r\n");
+    }
+
+    writer.flush();
+}
+
+//
+private void handleLpush(
+        List<String> arguments,
+        BufferedWriter writer) throws IOException {
+
+    if (arguments.size() < 3) {
+        writeError(
+                writer,
+                "wrong number of arguments for 'lpush' command");
+        writer.flush();
+        return;
+    }
+
+    String key = arguments.get(1);
+
+    long length = 0;
+
+    for (int i = 2; i < arguments.size(); i++) {
+        length = store.lpush(key, arguments.get(i));
+    }
+
+    writer.write(":" + length + "\r\n");
+    writer.flush();
+}
+//
+private void handleRpush(
+        List<String> arguments,
+        BufferedWriter writer) throws IOException {
+
+    if (arguments.size() < 3) {
+        writeError(
+                writer,
+                "wrong number of arguments for 'rpush' command");
+        writer.flush();
+        return;
+    }
+
+    String key = arguments.get(1);
+
+    long length = 0;
+
+    for (int i = 2; i < arguments.size(); i++) {
+        length = store.rpush(key, arguments.get(i));
+    }
+
+    writer.write(":" + length + "\r\n");
+    writer.flush();
+}
+
+//
+private void handleLpop(
+        List<String> arguments,
+        BufferedWriter writer) throws IOException {
+
+    if (arguments.size() != 2) {
+        writeError(
+                writer,
+                "wrong number of arguments for 'lpop' command");
+        writer.flush();
+        return;
+    }
+
+    String value = store.lpop(arguments.get(1));
+
+    if (value == null) {
+        writer.write("$-1\r\n");
+    } else {
+        writeBulkString(writer, value);
+    }
+
+    writer.flush();
+}
+//
+private void handleRpop(
+        List<String> arguments,
+        BufferedWriter writer) throws IOException {
+
+    if (arguments.size() != 2) {
+        writeError(
+                writer,
+                "wrong number of arguments for 'rpop' command");
+        writer.flush();
+        return;
+    }
+
+    String value = store.rpop(arguments.get(1));
+
+    if (value == null) {
+        writer.write("$-1\r\n");
+    } else {
+        writeBulkString(writer, value);
+    }
+
+    writer.flush();
+}
+
+private void handleLrange(
+        List<String> arguments,
+        BufferedWriter writer) throws IOException {
+
+    if (arguments.size() != 4) {
+        writeError(
+                writer,
+                "wrong number of arguments for 'lrange' command");
+        writer.flush();
+        return;
+    }
+
+    try {
+        String key = arguments.get(1);
+        int start = Integer.parseInt(arguments.get(2));
+        int end = Integer.parseInt(arguments.get(3));
+
+        java.util.List<String> result =
+                store.lrange(key, start, end);
+
+        writer.write("*" + result.size() + "\r\n");
+
+        for (String value : result) {
+            writeBulkString(writer, value);
+        }
+
+    } catch (NumberFormatException e) {
+        writeError(writer, "value is not an integer or out of range");
+    }
+
+    writer.flush();
+}
+
+private void handleLlen(
+        List<String> arguments,
+        BufferedWriter writer) throws IOException {
+
+    if (arguments.size() != 2) {
+        writeError(
+                writer,
+                "wrong number of arguments for 'llen' command");
+        writer.flush();
+        return;
+    }
+
+    long length = store.llen(arguments.get(1));
+
+    writer.write(":" + length + "\r\n");
+    writer.flush();
+}
+//
+private void handleLpos(
+        List<String> arguments,
+        BufferedWriter writer) throws IOException {
+
+    if (arguments.size() != 3) {
+        writeError(
+                writer,
+                "wrong number of arguments for 'lpos' command");
+        writer.flush();
+        return;
+    }
+
+    String key = arguments.get(1);
+    String value = arguments.get(2);
+
+    long position = store.lpos(key, value);
+
+    writer.write(":" + position + "\r\n");
+    writer.flush();
+}
+
+//
+private void handleLindex(
+        List<String> arguments,
+        BufferedWriter writer) throws IOException {
+
+    if (arguments.size() != 3) {
+        writeError(
+                writer,
+                "wrong number of arguments for 'lindex' command");
+        writer.flush();
+        return;
+    }
+
+    try {
+        String key = arguments.get(1);
+        int index = Integer.parseInt(arguments.get(2));
+
+        String value = store.lindex(key, index);
+
+        if (value == null) {
+            writer.write("$-1\r\n");
+        } else {
+            writeBulkString(writer, value);
+        }
+
+    } catch (NumberFormatException e) {
+        writeError(writer, "value is not an integer or out of range");
+    }
+
+    writer.flush();
+}
+
+//
+private void handleLtrim(
+        List<String> arguments,
+        BufferedWriter writer) throws IOException {
+
+    if (arguments.size() != 4) {
+        writeError(
+                writer,
+                "wrong number of arguments for 'ltrim' command");
+        writer.flush();
+        return;
+    }
+
+    try {
+        String key = arguments.get(1);
+        int start = Integer.parseInt(arguments.get(2));
+        int end = Integer.parseInt(arguments.get(3));
+
+        store.ltrim(key, start, end);
+
+        writer.write("+OK\r\n");
+
+    } catch (NumberFormatException e) {
+        writeError(writer, "value is not an integer or out of range");
+    }
+
     writer.flush();
 }
 
