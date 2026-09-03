@@ -77,6 +77,10 @@ public class CommandHandler {
                 handleType(arguments, writer);
                 break;
 
+            case "TTL":
+                handleTtl(arguments, writer);
+                break;    
+
             default:
                 writeError(writer, "unknown command");
         }
@@ -564,6 +568,26 @@ public class CommandHandler {
 
         writer.flush();
     }
+
+
+    //
+    private void handleTtl(
+        List<String> arguments,
+        BufferedWriter writer) throws IOException {
+
+    if (arguments.size() != 2) {
+        writeError(
+                writer,
+                "wrong number of arguments for 'ttl' command");
+        writer.flush();
+        return;
+    }
+
+    long ttl = store.getTtl(arguments.get(1));
+
+    writer.write(":" + ttl + "\r\n");
+    writer.flush();
+}
 
     private void writeBulkString(
             BufferedWriter writer,
