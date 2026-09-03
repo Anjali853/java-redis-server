@@ -55,6 +55,29 @@ public class RedisStore {
     return remaining / 1000;
 }
 
+//
+public synchronized boolean persist(String key) {
+
+    if (!data.containsKey(key)) {
+        return false;
+    }
+
+    if (!expiry.containsKey(key)) {
+        return false;
+    }
+
+    Long expireAt = expiry.get(key);
+
+    if (System.currentTimeMillis() >= expireAt) {
+        data.remove(key);
+        expiry.remove(key);
+        return false;
+    }
+
+    expiry.remove(key);
+    return true;
+}
+
     public synchronized boolean delete(String key) {
         if (!data.containsKey(key)) {
             return false;

@@ -79,6 +79,10 @@ public class CommandHandler {
 
             case "TTL":
                 handleTtl(arguments, writer);
+                break;
+                
+            case "PERSIST":
+                handlePersist(arguments, writer);
                 break;    
 
             default:
@@ -586,6 +590,25 @@ public class CommandHandler {
     long ttl = store.getTtl(arguments.get(1));
 
     writer.write(":" + ttl + "\r\n");
+    writer.flush();
+}
+
+//
+private void handlePersist(
+        List<String> arguments,
+        BufferedWriter writer) throws IOException {
+
+    if (arguments.size() != 2) {
+        writeError(
+                writer,
+                "wrong number of arguments for 'persist' command");
+        writer.flush();
+        return;
+    }
+
+    boolean removed = store.persist(arguments.get(1));
+
+    writer.write(removed ? ":1\r\n" : ":0\r\n");
     writer.flush();
 }
 
